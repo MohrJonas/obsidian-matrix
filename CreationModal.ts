@@ -3,8 +3,17 @@ import ErrorModal from "./ErrorModal";
 
 export default class CreationModal extends Modal {
 
-	private matrixWidth: number = 2;
-	private matrixHeight: number = 2;
+	private static readonly matrixTypes: Record<string, string> = {
+		"Plain (matrix)": "matrix",
+		"Parentheses (pmatrix)": "pmatrix",
+		"Square brackets (bmatrix)": "bmatrix",
+		"Curly braces (Bmatrix)": "BMatrix",
+		"Pipes (vmatrix)": "vmatrix",
+		"Double Pipes (Vmatrix)": "Vmatrix"
+	};
+	private matrixWidth = 2;
+	private matrixHeight = 2;
+	private selectedMatrix = "Plain (matrix)";
 	private parentDiv: HTMLDivElement;
 	private settingsDiv: HTMLDivElement;
 	private matrixDiv: HTMLDivElement;
@@ -15,6 +24,14 @@ export default class CreationModal extends Modal {
 
 	onOpen() {
 		this.createHTML();
+		new Setting(this.settingsDiv).setName("Matrix type").addDropdown((dc) => {
+			Object.keys(CreationModal.matrixTypes).forEach((key) => {
+				dc.addOption(key, key);
+			});
+			dc.onChange((value) => {
+				this.selectedMatrix = value;
+			});
+		});
 		new Setting(this.settingsDiv).setName("Matrix width").addSlider((slider) => {
 			slider.setValue(2);
 			slider.setLimits(1, 10, 1);
@@ -39,8 +56,9 @@ export default class CreationModal extends Modal {
 			button.setIcon("checkmark");
 			button.setCta();
 			button.onClick(() => {
-				let chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
-					//@ts-ignore
+				const chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
+					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+					// @ts-ignore
 					return child.value;
 				}).reduce((resultArray, item, index) => {
 					const chunkIndex = Math.floor(index / this.matrixWidth);
@@ -50,10 +68,10 @@ export default class CreationModal extends Modal {
 					resultArray[chunkIndex].push(item);
 					return resultArray;
 				}, []);
-				let latexString = chunks.map((chunk) => {
+				const latexString = chunks.map((chunk) => {
 					return chunk.join(" & ");
 				}).join(" \\\\\n");
-				this.writeAtCursor(`\\begin{pmatrix}\n${latexString}\n\\end{pmatrix}`);
+				this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}\n${latexString}\n\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
 				this.close();
 			});
 		});
@@ -94,7 +112,7 @@ export default class CreationModal extends Modal {
 		if (mdView) {
 			mdView.editor.replaceRange(toWrite, mdView.editor.getCursor());
 		} else {
-			this.close()
+			this.close();
 			new ErrorModal(this.app, new Error("No markdown view open")).open();
 		}
 	}
