@@ -41,7 +41,12 @@ export default class CreationModal extends Modal {
 			}
 		});
 		new Setting(this.settingsDiv).setName("Matrix width").addSlider((slider) => {
-			slider.setValue(2);
+			if (this.parentPlugin.settings.rememberMatrixDimensions) {
+				slider.setValue(this.parentPlugin.settings.prevX == null ? 2 : this.parentPlugin.settings.prevX);
+				this.matrixWidth = this.parentPlugin.settings.prevX == null ? 2 : this.parentPlugin.settings.prevX;
+			} else {
+				slider.setValue(2);
+			}
 			slider.setLimits(1, 10, 1);
 			slider.showTooltip();
 			slider.setDynamicTooltip();
@@ -51,7 +56,12 @@ export default class CreationModal extends Modal {
 			});
 		});
 		new Setting(this.settingsDiv).setName("Matrix height").addSlider((slider) => {
-			slider.setValue(2);
+			if (this.parentPlugin.settings.rememberMatrixDimensions) {
+				slider.setValue(this.parentPlugin.settings.prevY == null ? 2 : this.parentPlugin.settings.prevY);
+				this.matrixHeight = this.parentPlugin.settings.prevY == null ? 2 : this.parentPlugin.settings.prevY;
+			} else {
+				slider.setValue(2);
+			}
 			slider.setLimits(1, 10, 1);
 			slider.showTooltip();
 			slider.setDynamicTooltip();
@@ -66,6 +76,11 @@ export default class CreationModal extends Modal {
 			button.onClick(() => {
 				if (this.parentPlugin.settings.rememberMatrixType) {
 					this.parentPlugin.settings.lastUsedMatrix = this.selectedMatrix;
+					this.parentPlugin.saveSettings();
+				}
+				if (this.parentPlugin.settings.rememberMatrixDimensions) {
+					this.parentPlugin.settings.prevX = this.matrixWidth;
+					this.parentPlugin.settings.prevY = this.matrixHeight;
 					this.parentPlugin.saveSettings();
 				}
 
