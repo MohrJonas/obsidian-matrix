@@ -1,5 +1,6 @@
 import {App, MarkdownView, Modal, Setting} from "obsidian";
 import ErrorModal from "./ErrorModal";
+import MyPlugin from "./main";
 
 export default class CreationModal extends Modal {
 
@@ -18,8 +19,11 @@ export default class CreationModal extends Modal {
 	private settingsDiv: HTMLDivElement;
 	private matrixDiv: HTMLDivElement;
 
-	constructor(app: App) {
+	private parentPlugin: MyPlugin;
+
+	constructor(app: App, plugin: MyPlugin) {
 		super(app);
+		this.parentPlugin = plugin;
 	}
 
 	onOpen() {
@@ -31,6 +35,10 @@ export default class CreationModal extends Modal {
 			dc.onChange((value) => {
 				this.selectedMatrix = value;
 			});
+			if (this.parentPlugin.settings.rememberMatrixType && this.parentPlugin.settings.lastUsedMatrix) {
+				dc.setValue(this.parentPlugin.settings.lastUsedMatrix);
+				this.selectedMatrix = this.parentPlugin.settings.lastUsedMatrix;
+			}
 		});
 		new Setting(this.settingsDiv).setName("Matrix width").addSlider((slider) => {
 			slider.setValue(2);
@@ -56,6 +64,11 @@ export default class CreationModal extends Modal {
 			button.setIcon("checkmark");
 			button.setCta();
 			button.onClick(() => {
+				if (this.parentPlugin.settings.rememberMatrixType) {
+					this.parentPlugin.settings.lastUsedMatrix = this.selectedMatrix;
+					this.parentPlugin.saveSettings();
+				}
+
 				const chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
 					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 					// @ts-ignore
@@ -70,8 +83,12 @@ export default class CreationModal extends Modal {
 				}, []);
 				const latexString = chunks.map((chunk) => {
 					return chunk.join(" & ");
-				}).join(" \\\\\n");
-				this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}\n${latexString}\n\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
+				}).join(this.parentPlugin.settings.inline ? " \\\\" : " \\\\\n");
+				if (this.parentPlugin.settings.inline) {
+					this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}${latexString}\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
+				} else {
+					this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}\n${latexString}\n\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
+				}
 				this.close();
 			});
 		});
