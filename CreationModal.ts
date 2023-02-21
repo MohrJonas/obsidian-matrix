@@ -1,4 +1,4 @@
-import {App, MarkdownView, Modal, Setting} from "obsidian";
+import {App, MarkdownView, Modal, Setting, SliderComponent} from "obsidian";
 import ErrorModal from "./ErrorModal";
 import MyPlugin from "./main";
 
@@ -21,6 +21,12 @@ export default class CreationModal extends Modal {
 
 	private parentPlugin: MyPlugin;
 
+	private heightSlider: Setting;
+	private widthSlider: Setting;
+
+	private readonly MAX_WIDTH = 10; // Max width of a matrix in GUI. (min is 1)
+	private readonly MAX_HEIGHT = 10; // Max height of same.
+
 	constructor(app: App, plugin: MyPlugin) {
 		super(app);
 		this.parentPlugin = plugin;
@@ -40,14 +46,14 @@ export default class CreationModal extends Modal {
 				this.selectedMatrix = this.parentPlugin.settings.lastUsedMatrix;
 			}
 		});
-		new Setting(this.settingsDiv).setName("Matrix width").addSlider((slider) => {
+		this.widthSlider = new Setting(this.settingsDiv).setName("Matrix width").addSlider((slider) => {
 			if (this.parentPlugin.settings.rememberMatrixDimensions) {
 				slider.setValue(this.parentPlugin.settings.prevX == null ? 2 : this.parentPlugin.settings.prevX);
 				this.matrixWidth = this.parentPlugin.settings.prevX == null ? 2 : this.parentPlugin.settings.prevX;
 			} else {
 				slider.setValue(2);
 			}
-			slider.setLimits(1, 10, 1);
+			slider.setLimits(1, this.MAX_WIDTH, 1);
 			slider.showTooltip();
 			slider.setDynamicTooltip();
 			slider.onChange((value) => {
@@ -55,14 +61,14 @@ export default class CreationModal extends Modal {
 				this.regenerateMatrix();
 			});
 		});
-		new Setting(this.settingsDiv).setName("Matrix height").addSlider((slider) => {
+		this.heightSlider = new Setting(this.settingsDiv).setName("Matrix height").addSlider((slider) => {
 			if (this.parentPlugin.settings.rememberMatrixDimensions) {
 				slider.setValue(this.parentPlugin.settings.prevY == null ? 2 : this.parentPlugin.settings.prevY);
 				this.matrixHeight = this.parentPlugin.settings.prevY == null ? 2 : this.parentPlugin.settings.prevY;
 			} else {
 				slider.setValue(2);
 			}
-			slider.setLimits(1, 10, 1);
+			slider.setLimits(1, this.MAX_HEIGHT, 1);
 			slider.showTooltip();
 			slider.setDynamicTooltip();
 			slider.onChange((value) => {
@@ -74,45 +80,85 @@ export default class CreationModal extends Modal {
 			button.setIcon("checkmark");
 			button.setCta();
 			button.onClick(() => {
-				if (this.parentPlugin.settings.rememberMatrixType) {
-					this.parentPlugin.settings.lastUsedMatrix = this.selectedMatrix;
-					this.parentPlugin.saveSettings();
-				}
-				if (this.parentPlugin.settings.rememberMatrixDimensions) {
-					this.parentPlugin.settings.prevX = this.matrixWidth;
-					this.parentPlugin.settings.prevY = this.matrixHeight;
-					this.parentPlugin.saveSettings();
-				}
-
-				const chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
-					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-					// @ts-ignore
-					return child.value;
-				}).reduce((resultArray, item, index) => {
-					const chunkIndex = Math.floor(index / this.matrixWidth);
-					if (!resultArray[chunkIndex]) {
-						resultArray[chunkIndex] = [];
-					}
-					resultArray[chunkIndex].push(item);
-					return resultArray;
-				}, []);
-				const latexString = chunks.map((chunk) => {
-					return chunk.join(" & ");
-				}).join(this.parentPlugin.settings.inline ? " \\\\" : " \\\\\n");
-				if (this.parentPlugin.settings.inline) {
-					this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}${latexString}\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
-				} else {
-					this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}\n${latexString}\n\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
-				}
-				this.close();
+				this.constructOutput();
 			});
 		});
+
+		this.parentDiv.addEventListener("keyup", this.keyEventHandler);
+
 		this.createInputs();
 		this.applyCorrectStyle();
 	}
 
 	onClose() {
 		this.contentEl.empty();
+	}
+
+	private keyEventHandler = (evt: KeyboardEvent) => {
+		const widthSliderComponent = this.widthSlider.components[0] as SliderComponent;
+		const heightSliderComponent = this.heightSlider.components[0] as SliderComponent;
+
+		if (evt.key == "Enter") {
+			this.constructOutput();
+		} else if (evt.key == "ArrowRight" && evt.altKey && this.matrixWidth < this.MAX_WIDTH) {
+			this.matrixWidth += 1;
+			widthSliderComponent.setValue(this.matrixWidth);
+			this.regenerateMatrix();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus(); // If focus is not kept on some element, then for some reason, the keybind ceases to work until the user manually focuses on a text box within matrixDiv again
+		} else if (evt.key == "ArrowLeft" && evt.altKey && this.matrixWidth > 1) {
+			this.matrixWidth -= 1;
+			widthSliderComponent.setValue(this.matrixWidth);
+			this.regenerateMatrix();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
+		} else if (evt.key == "ArrowUp" && evt.altKey && this.matrixHeight > 1) {
+			this.matrixHeight -= 1;
+			heightSliderComponent.setValue(this.matrixHeight);
+			this.regenerateMatrix();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
+		} else if (evt.key == "ArrowDown" && evt.altKey && this.matrixHeight < this.MAX_HEIGHT) {
+			this.matrixHeight += 1;
+			heightSliderComponent.setValue(this.matrixHeight);
+			this.regenerateMatrix();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
+		}
+	};
+
+	private constructOutput() {
+		if (this.parentPlugin.settings.rememberMatrixType) {
+			this.parentPlugin.settings.lastUsedMatrix = this.selectedMatrix;
+			this.parentPlugin.saveSettings();
+		}
+		if (this.parentPlugin.settings.rememberMatrixDimensions) {
+			this.parentPlugin.settings.prevX = this.matrixWidth;
+			this.parentPlugin.settings.prevY = this.matrixHeight;
+			this.parentPlugin.saveSettings();
+		}
+
+		const chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-ignore
+			return child.value;
+		}).reduce((resultArray, item, index) => {
+			const chunkIndex = Math.floor(index / this.matrixWidth);
+			if (!resultArray[chunkIndex]) {
+				resultArray[chunkIndex] = [];
+			}
+			resultArray[chunkIndex].push(item);
+			return resultArray;
+		}, []);
+		const latexString = chunks.map((chunk) => {
+			return chunk.join(" & ");
+		}).join(this.parentPlugin.settings.inline ? " \\\\" : " \\\\\n");
+		if (this.parentPlugin.settings.inline) {
+			this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}${latexString}\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
+		} else {
+			this.writeAtCursor(`\\begin{${CreationModal.matrixTypes[this.selectedMatrix]}}\n${latexString}\n\\end{${CreationModal.matrixTypes[this.selectedMatrix]}}`);
+		}
+		this.close();
 	}
 
 	private createHTML() {
