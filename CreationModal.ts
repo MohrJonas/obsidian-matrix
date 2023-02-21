@@ -1,4 +1,4 @@
-import {App, MarkdownView, Modal, Setting} from "obsidian";
+import {App, MarkdownView, Modal, Setting, SliderComponent} from "obsidian";
 import ErrorModal from "./ErrorModal";
 import MyPlugin from "./main";
 
@@ -94,29 +94,36 @@ export default class CreationModal extends Modal {
 		this.contentEl.empty();
 	}
 
-	private keyEventHandler = (evt) => {
+	private keyEventHandler = (evt: KeyboardEvent) => {
+		const widthSliderComponent = this.widthSlider.components[0] as SliderComponent;
+		const heightSliderComponent = this.heightSlider.components[0] as SliderComponent;
+
 		if (evt.key == "Enter") {
 			this.constructOutput();
 		} else if (evt.key == "ArrowRight" && evt.altKey && this.matrixWidth < this.MAX_WIDTH) {
 			this.matrixWidth += 1;
-			this.widthSlider.components[0].setValue(this.matrixWidth);
+			widthSliderComponent.setValue(this.matrixWidth);
 			this.regenerateMatrix();
-			this.matrixDiv.children[0].focus(); // If focus is not kept on some element, then for some reason, the keybind ceases to work until the user manually focuses on a text box within matrixDiv again
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus(); // If focus is not kept on some element, then for some reason, the keybind ceases to work until the user manually focuses on a text box within matrixDiv again
 		} else if (evt.key == "ArrowLeft" && evt.altKey && this.matrixWidth > 1) {
 			this.matrixWidth -= 1;
-			this.widthSlider.components[0].setValue(this.matrixWidth);
+			widthSliderComponent.setValue(this.matrixWidth);
 			this.regenerateMatrix();
-			this.matrixDiv.children[0].focus();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
 		} else if (evt.key == "ArrowUp" && evt.altKey && this.matrixHeight > 1) {
 			this.matrixHeight -= 1;
-			this.heightSlider.components[0].setValue(this.matrixHeight);
+			heightSliderComponent.setValue(this.matrixHeight);
 			this.regenerateMatrix();
-			this.matrixDiv.children[0].focus();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
 		} else if (evt.key == "ArrowDown" && evt.altKey && this.matrixHeight < this.MAX_HEIGHT) {
 			this.matrixHeight += 1;
-			this.heightSlider.components[0].setValue(this.matrixHeight);
+			heightSliderComponent.setValue(this.matrixHeight);
 			this.regenerateMatrix();
-			this.matrixDiv.children[0].focus();
+			const firstTextBox = this.matrixDiv.children[0] as HTMLElement;
+			firstTextBox.focus();
 		}
 	};
 
