@@ -1,4 +1,4 @@
-import {Plugin} from 'obsidian';
+import {Plugin} from "obsidian";
 import CreationModal from "./CreationModal";
 import {MatrixSettingTab} from "./settings";
 
@@ -18,14 +18,14 @@ const DEFAULT_SETTINGS: Partial<MatrixPluginSettings> = {
 	lastUsedMatrix: "",
 	prevX: null,
 	prevY: null,
-  };
+};
 
 export default class MyPlugin extends Plugin {
 	settings: MatrixPluginSettings;
 
 	async onload() {
 		this.addRibbonIcon("pane-layout", "Obsidian Matrix", () => {
-			new CreationModal(this.app, this).open()
+			new CreationModal(this.app, this).open();
 		});
 
 		this.addCommand({
@@ -33,7 +33,7 @@ export default class MyPlugin extends Plugin {
 			name: "Open Obsidian Matrix menu",
 			hotkeys: [],
 			callback: () => {
-				new CreationModal(this.app, this).open()
+				new CreationModal(this.app, this).open();
 			},
 		});
 

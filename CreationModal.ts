@@ -1,5 +1,4 @@
-import {App, MarkdownView, Modal, Setting, SliderComponent} from "obsidian";
-import ErrorModal from "./ErrorModal";
+import {App, MarkdownView, Modal, Notice, Setting, SliderComponent} from "obsidian";
 import MyPlugin from "./main";
 
 export default class CreationModal extends Modal {
@@ -33,6 +32,10 @@ export default class CreationModal extends Modal {
 	}
 
 	onOpen() {
+		if (!this.app.workspace.getActiveViewOfType(MarkdownView)) {
+			new Notice("No markdown view open");
+			this.close();
+		}
 		this.createHTML();
 		new Setting(this.settingsDiv).setName("Matrix type").addDropdown((dc) => {
 			Object.keys(CreationModal.matrixTypes).forEach((key) => {
@@ -139,9 +142,7 @@ export default class CreationModal extends Modal {
 		}
 
 		const chunks: Array<Array<string>> = Array.from(this.matrixDiv.children).map((child) => {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			return child.value;
+			return (child as HTMLInputElement).value;
 		}).reduce((resultArray, item, index) => {
 			const chunkIndex = Math.floor(index / this.matrixWidth);
 			if (!resultArray[chunkIndex]) {
@@ -180,18 +181,18 @@ export default class CreationModal extends Modal {
 	}
 
 	private regenerateMatrix() {
+		const matrixContent = Array.from(this.matrixDiv.children).map((child) => { return (child as HTMLInputElement).value; });
 		this.matrixDiv.empty();
 		this.createInputs();
+		matrixContent.slice(0, this.matrixDiv.children.length).forEach((content, index) => {
+			(this.matrixDiv.children[index] as HTMLInputElement).value = content;
+		});
 		this.applyCorrectStyle();
 	}
 
 	private writeAtCursor(toWrite: string) {
 		const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (mdView) {
-			mdView.editor.replaceRange(toWrite, mdView.editor.getCursor());
-		} else {
-			this.close();
-			new ErrorModal(this.app, new Error("No markdown view open")).open();
-		}
+		mdView.editor.replaceRange(toWrite, mdView.editor.getCursor());
+		this.close();
 	}
 }
