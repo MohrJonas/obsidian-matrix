@@ -7,7 +7,7 @@ export default class CreationModal extends Modal {
 		"Plain (matrix)": "matrix",
 		"Parentheses (pmatrix)": "pmatrix",
 		"Square brackets (bmatrix)": "bmatrix",
-		"Curly braces (Bmatrix)": "BMatrix",
+		"Curly braces (Bmatrix)": "Bmatrix",
 		"Pipes (vmatrix)": "vmatrix",
 		"Double Pipes (Vmatrix)": "Vmatrix"
 	};
